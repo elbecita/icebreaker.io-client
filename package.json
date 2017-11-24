@@ -1,5 +1,5 @@
 {
-  "name": "webrtc-icebreaker-client",
+  "name": "icebreaker.io-client",
   "version": "0.0.0",
   "description": "Client library for webrtc-icebreaker signaling server",
   "main": "./src/client.js",
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/elbecita/webrtc-icebreaker-client.git"
+    "url": "git+https://github.com/elbecita/icebreaker.io-client.git"
   },
   "keywords": [
     "webrtc"
@@ -16,9 +16,9 @@
   "author": "Maria Fernandez",
   "license": "GPL-3.0",
   "bugs": {
-    "url": "https://github.com/elbecita/webrtc-icebreaker-client/issues"
+    "url": "https://github.com/elbecita/icebreaker.io-client/issues"
   },
-  "homepage": "https://github.com/elbecita/webrtc-icebreaker-client#readme",
+  "homepage": "https://github.com/elbecita/icebreaker.io-client#readme",
   "dependencies": {
     "socket.io-client": "^2.0.4"
   }
