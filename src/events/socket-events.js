@@ -1,6 +1,6 @@
 'use strict';
 
-const events = {
+const socketEvents = {
   outbound: {
     ICE_CANDIDATE: 'icebreaker.io.candidate',
     SDP: 'icebreaker.io.sdp',
@@ -9,8 +9,9 @@ const events = {
   },
   inbound: {
     REMOTE_ICE_CANDIDATE: 'icebreaker.io.remoteCandidate',
+    REMOTE_PEER_JOINED: 'icebreaker.io.remotePeerJoined',
     REMOTE_SDP: 'icebreaker.io.remoteSdp'
   }
 };
 
-module.exports = events;
+module.exports = socketEvents;

@@ -2,15 +2,15 @@
 
 const signals = require('signals');
 
-let events;
-events = events || {};
+let localEvents;
+localEvents = localEvents || {};
 
-if (typeof events !== 'undefined') {
-  events = {
+if (typeof localEvents !== 'undefined') {
+  localEvents = {
     remoteVideoReady: new signals.Signal(),
     localVideoReady: new signals.Signal(),
     connectionEnded: new signals.Signal()
   };
 }
 
-module.exports = events;
+module.exports = localEvents;

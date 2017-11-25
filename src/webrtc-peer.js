@@ -26,12 +26,14 @@ class WebrtcPeer {
 
     // Socket event handlers:
     this._onRemoteIceCandidate = this._onRemoteIceCandidate.bind(this);
+    this._onRemotePeerJoined = this._onRemotePeerJoined.bind(this);
     this._onRemoteSdp = this._onRemoteSdp.bind(this);
 
     this._bindSocketEventHandlers = this._bindSocketEventHandlers.bind(this);
     this._createPeerConnection = this._createPeerConnection.bind(this);
     this._processLocalSdp = this._processLocalSdp.bind(this);
     this._processQueuedIceCandidates = this._processQueuedIceCandidates.bind(this);
+    this._sdpExchange = this._sdpExchange.bind(this);
     this.start = this.start.bind(this);
 
     this._bindSocketEventHandlers();
@@ -39,6 +41,7 @@ class WebrtcPeer {
 
   _bindSocketEventHandlers() {
     this.socket.on(socketEvents.inbound.REMOTE_ICE_CANDIDATE, this._onRemoteIceCandidate);
+    this.socket.on(socketEvents.inbound.REMOTE_PEER_JOINED, this._onRemotePeerJoined);
     this.socket.on(socketEvents.inbound.REMOTE_SDP, this._onRemoteSdp);
   }
 
@@ -52,8 +55,8 @@ class WebrtcPeer {
 
   _onPeerConnectionIceCandidate(event) {
     const socketMessage = {
-      connId: this.connId,
       data: {
+        connId: this.connId,
         candidate: event.candidate
       }
     };
@@ -65,6 +68,7 @@ class WebrtcPeer {
     this.remoteVideoStream = event.stream;
     const remoteVideoSrc = URL.createObjectURL(event.stream);
     localEvents.remoteVideoReady.dispatch({
+      connId: this.connId,
       peerId: this.socket.id,
       stream: this.remoteVideoStream,
       src: remoteVideoSrc
@@ -84,6 +88,11 @@ class WebrtcPeer {
         this.pc.addIceCandidate(remoteCandidate);
       }
     }
+  }
+
+  _onRemotePeerJoined() {
+    console.log('>>>>> _onRemotePeerJoined');
+    this._sdpExchange();
   }
 
   _onRemoteSdp(socketMessage) {
@@ -109,18 +118,11 @@ class WebrtcPeer {
     return this.pc.setLocalDescription(sdp)
       .then(() => {
         const socketMessage = {
-          connId: this.connId,
-          data: { sdp: this.pc.localDescription }
+          data: {
+            connId: this.connId,
+            sdp: this.pc.localDescription }
         };
         this.socket.emit(socketEvents.outbound.SDP, socketMessage);
-
-        const localVideoSrc = URL.createObjectURL(this.localVideoStream);
-        localEvents.localVideoReady.dispatch({
-          peerId: this.socket.id,
-          stream: this.localVideoStream,
-          src: localVideoSrc
-        });
-
       });
   }
 
@@ -131,12 +133,27 @@ class WebrtcPeer {
     });
   }
 
+  _sdpExchange(remoteSdp) {
+    this.pc.addStream(this.localVideoStream);
+    let sdpExchangeTask;
+    if (remoteSdp) {
+      sdpExchangeTask = this.pc.createAnswer();
+    } else {
+      sdpExchangeTask = this.pc.createOffer();
+    }
+    sdpExchangeTask
+      .then(this._processLocalSdp)
+      .catch(error => {
+        console.log('>>>>> error on sdp exchange: ', error);
+      });
+  }
+
   /**
   * Starts a webrtc connection.
   */
   start(remoteSdp) {
     this._createPeerConnection();
-    const setRemoteDescriptionTask = Promise.resolve();
+    let setRemoteDescriptionTask = Promise.resolve();
 
     // If start called through onRemoteSdp, remote sdp file needs to be set.
     if (remoteSdp) {
@@ -148,15 +165,21 @@ class WebrtcPeer {
       .then(stream => {
         console.log('>>>>> Inside getUserMedia.');
         this.localVideoStream = stream;
-        return this.pc.addStream(stream);
-      })
-      .then(() => {
+        const localVideoSrc = URL.createObjectURL(this.localVideoStream);
+        localEvents.localVideoReady.dispatch({
+          connId: this.connId,
+          peerId: this.socket.id,
+          stream: this.localVideoStream,
+          src: localVideoSrc
+        });
+
+        // If start called through onRemoteSdp both peers are connected, make local
+        // one send its sdp file
         if (remoteSdp) {
-          return this.pc.createAnswer();
+          return this._sdpExchange(remoteSdp);
         }
-        return this.pc.createOffer();
+        return Promise.resolve();
       })
-      .then(this._processLocalSdp)
       .catch(error => {
         console.log('>>>>> error on getUserMedia: ', error);
       });
