@@ -1,30 +1,55 @@
 'use strict';
 
 const io = require('socket.io-client');
-const events = require('./events/events');
+const WebrtcPeer = require('./webrtc-peer');
+const socketEvents = require('./events/socket-events');
+const localEvents = require('./events/local-events');
 
 class _Client {
   constructor(uri, opts) {
     this.socket = io(uri, opts);
+    this.id = null;
+    this.webrtcPeer = null;
+    this.events = localEvents;
 
     // Binding
+    this._initWebrtcConnection - this._initWebrtcConnection.bind(this);
     this._onConnect = this._onConnect.bind(this);
+    this.start = this.start.bind(this);
+    this.stop = this.stop.bind(this);
 
     this.socket.on('connect', this._onConnect);
   }
 
+  _initWebrtcConnection(connId, startProps) {
+    const webrtcPeerProps = {
+      connId,
+      socket: this.socket,
+      configuration: startProps.configuration,
+      mediaConstraints: startProps.mediaConstraints
+    };
+    this.webrtcPeer = new WebrtcPeer(webrtcPeerProps);
+    // If this is the offeror, start the peer connection:
+    if (!startProps.connId) {
+      this.webrtcPeer.start();
+    }
+  }
+
   _onConnect(){
+    this.id = this.socket.id;
     console.log('>>>>> socket client connected, socket id: ', this.socket.id);
   }
 
-  start(connId) {
+  start(_props) {
+    const props = _props || {};
     return new Promise((resolve, reject) => {
       const event = {
-        data: { connId }
+        data: { connId: props.connId }
       };
-      this.socket.emit(events.outbound.START, event,
+      this.socket.emit(socketEvents.outbound.START, event,
         response => {
           if (response.success) {
+            this._initWebrtcConnection(response.data.connId, props);
             return resolve(response.data.connId);
           }
           return reject(response.data.error);
@@ -37,7 +62,7 @@ class _Client {
       const event = {
         data: { connId }
       };
-      this.socket.emit(events.outbound.STOP, event,
+      this.socket.emit(socketEvents.outbound.STOP, event,
         response => {
           if (response.success) {
             return resolve();

@@ -1,0 +1,16 @@
+'use strict';
+
+const events = {
+  outbound: {
+    ICE_CANDIDATE: 'icebreaker.io.candidate',
+    SDP: 'icebreaker.io.sdp',
+    START: 'icebreaker.io.start',
+    STOP: 'icebreaker.io.stop'
+  },
+  inbound: {
+    REMOTE_ICE_CANDIDATE: 'icebreaker.io.remoteCandidate',
+    REMOTE_SDP: 'icebreaker.io.remoteSdp'
+  }
+};
+
+module.exports = events;
