@@ -4,8 +4,7 @@ const socketEvents = {
   outbound: {
     ICE_CANDIDATE: 'icebreaker.io.candidate',
     SDP: 'icebreaker.io.sdp',
-    START: 'icebreaker.io.start',
-    STOP: 'icebreaker.io.stop'
+    START: 'icebreaker.io.start'
   },
   inbound: {
     REMOTE_ICE_CANDIDATE: 'icebreaker.io.remoteCandidate',

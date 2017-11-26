@@ -60,12 +60,10 @@ class WebrtcPeer {
   _onPeerConnectionAddStream(event) {
     console.log('>>>>> onPeerConnectionAddStream.');
     this.remoteVideoStream = event.stream;
-    const remoteVideoSrc = URL.createObjectURL(event.stream);
     localEvents.remoteVideoReady.dispatch({
       connId: this.connId,
       peerId: this.socket.id,
-      stream: this.remoteVideoStream,
-      src: remoteVideoSrc
+      stream: this.remoteVideoStream
     });
   }
 
@@ -187,12 +185,10 @@ class WebrtcPeer {
       .then(stream => {
         console.log('>>>>> Inside getUserMedia.');
         this.localVideoStream = stream;
-        const localVideoSrc = URL.createObjectURL(this.localVideoStream);
         localEvents.localVideoReady.dispatch({
           connId: this.connId,
           peerId: this.socket.id,
-          stream: this.localVideoStream,
-          src: localVideoSrc
+          stream: this.localVideoStream
         });
 
         // If start called through onRemoteSdp both peers are connected, make local
@@ -211,9 +207,12 @@ class WebrtcPeer {
   * Stops the webrtc connection.
   */
   stop() {
+    if (this.localVideoStream && typeof this.localVideoStream.getTracks === 'function') {
+      console.log('>>>>> stopping stream tracks');
+      this.localVideoStream.getTracks().forEach(track => track.stop());
+    }
     if (this.pc && typeof this.pc.close === 'function') {
       console.log('>>>>> stop called, calling close on pc.')
-      URL.revokeObjectURL(this.localVideoStream);
       this.pc.close();
       //delete this.pc;
     }

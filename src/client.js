@@ -71,22 +71,10 @@ class _Client {
   }
 
   stop() {
-    return new Promise((resolve, reject) => {
-      const event = {
-        data: { connId: this.connId }
-      };
-      this.socket.emit(socketEvents.outbound.STOP, event,
-        response => {
-          if (this.webrtcPeer) {
-            this.webrtcPeer.stop();
-          }
-          this._dispose();
-          if (response.success) {
-            return resolve();
-          }
-          return reject(response.data.error);
-        });
-    });
+    if (this.webrtcPeer) {
+      this.webrtcPeer.stop();
+    }
+    this._dispose();
   }
 }
 
