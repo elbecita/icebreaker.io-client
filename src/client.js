@@ -9,11 +9,13 @@ class _Client {
   constructor(uri, opts) {
     this.socket = io(uri, opts);
     this.id = null;
+    this.connId = null;
     this.webrtcPeer = null;
     this.events = localEvents;
 
     // Binding
     this._initWebrtcConnection - this._initWebrtcConnection.bind(this);
+    this._dispose = this._dispose.bind(this);
     this._onConnect = this._onConnect.bind(this);
     this.start = this.start.bind(this);
     this.stop = this.stop.bind(this);
@@ -33,6 +35,16 @@ class _Client {
     if (startPeerConnection) {
       this.webrtcPeer.start();
     }
+
+    this.events.connectionEnded.addOnce(this._dispose);
+  }
+
+  _dispose() {
+    if (this.socket) {
+      console.log('>>>>> disposing socket.');
+      this.socket.disconnect();
+      delete this.socket;
+    }
   }
 
   _onConnect(){
@@ -49,6 +61,7 @@ class _Client {
       this.socket.emit(socketEvents.outbound.START, event,
         response => {
           if (response.success) {
+            this.connId = response.data.connId;
             this._initWebrtcConnection(response.data.connId, response.data.isNew, props);
             return resolve(response.data.connId);
           }
@@ -57,13 +70,17 @@ class _Client {
     });
   }
 
-  stop(connId) {
+  stop() {
     return new Promise((resolve, reject) => {
       const event = {
-        data: { connId }
+        data: { connId: this.connId }
       };
       this.socket.emit(socketEvents.outbound.STOP, event,
         response => {
+          if (this.webrtcPeer) {
+            this.webrtcPeer.stop();
+          }
+          this._dispose();
           if (response.success) {
             return resolve();
           }

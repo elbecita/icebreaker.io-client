@@ -23,11 +23,13 @@ class WebrtcPeer {
     // PeerConnection event handlers:
     this._onPeerConnectionAddStream = this._onPeerConnectionAddStream.bind(this);
     this._onPeerConnectionIceCandidate = this._onPeerConnectionIceCandidate.bind(this);
+    this._onPeerConnectionSignalingStateChange = this._onPeerConnectionSignalingStateChange.bind(this);
 
     // Socket event handlers:
     this._onRemoteIceCandidate = this._onRemoteIceCandidate.bind(this);
     this._onRemotePeerJoined = this._onRemotePeerJoined.bind(this);
     this._onRemoteSdp = this._onRemoteSdp.bind(this);
+    this._onRemoteStop = this._onRemoteStop.bind(this);
 
     this._bindSocketEventHandlers = this._bindSocketEventHandlers.bind(this);
     this._createPeerConnection = this._createPeerConnection.bind(this);
@@ -43,24 +45,16 @@ class WebrtcPeer {
     this.socket.on(socketEvents.inbound.REMOTE_ICE_CANDIDATE, this._onRemoteIceCandidate);
     this.socket.on(socketEvents.inbound.REMOTE_PEER_JOINED, this._onRemotePeerJoined);
     this.socket.on(socketEvents.inbound.REMOTE_SDP, this._onRemoteSdp);
+    this.socket.on(socketEvents.inbound.REMOTE_STOP, this._onRemoteStop);
   }
 
   _createPeerConnection() {
     this.pc = new RTCPeerConnection(this.configuration);
 
     // Bind events
-    this.pc.onicecandidate = this._onPeerConnectionIceCandidate;
     this.pc.onaddstream = this._onPeerConnectionAddStream;
-  }
-
-  _onPeerConnectionIceCandidate(event) {
-    const socketMessage = {
-      data: {
-        connId: this.connId,
-        candidate: event.candidate
-      }
-    };
-    this.socket.emit(socketEvents.outbound.ICE_CANDIDATE, socketMessage);
+    this.pc.onicecandidate = this._onPeerConnectionIceCandidate;
+    this.pc.onsignalingstatechange = this._onPeerConnectionSignalingStateChange;
   }
 
   _onPeerConnectionAddStream(event) {
@@ -73,6 +67,30 @@ class WebrtcPeer {
       stream: this.remoteVideoStream,
       src: remoteVideoSrc
     });
+  }
+
+  _onPeerConnectionIceCandidate(event) {
+    const socketMessage = {
+      data: {
+        connId: this.connId,
+        candidate: event.candidate
+      }
+    };
+    this.socket.emit(socketEvents.outbound.ICE_CANDIDATE, socketMessage);
+  }
+
+  _onPeerConnectionSignalingStateChange(event) {
+    if (this.pc) {
+      console.log('>>>>> _onPeerConnectionSignalingStateChange: ', this.pc.signalingState)
+      switch(this.pc.signalingState) {
+        case 'closed':
+          localEvents.connectionEnded.dispatch();
+          break;
+        case 'failed':
+          this.stop();
+          break;
+      }
+    }
   }
 
   _onRemoteIceCandidate(socketMessage) {
@@ -111,6 +129,10 @@ class WebrtcPeer {
       return this.start(remoteDesc)
         .then(this._processQueuedIceCandidates);
     }
+  }
+
+  _onRemoteStop() {
+    this.stop();
   }
 
   _processLocalSdp(sdp) {
@@ -183,6 +205,19 @@ class WebrtcPeer {
       .catch(error => {
         console.log('>>>>> error on getUserMedia: ', error);
       });
+  }
+
+  /**
+  * Stops the webrtc connection.
+  */
+  stop() {
+    if (this.pc && typeof this.pc.close === 'function') {
+      console.log('>>>>> stop called, calling close on pc.')
+      URL.revokeObjectURL(this.localVideoStream);
+      this.pc.close();
+      //delete this.pc;
+    }
+    localEvents.connectionEnded.dispatch();
   }
 
 }
