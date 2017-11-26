@@ -21,7 +21,7 @@ class _Client {
     this.socket.on('connect', this._onConnect);
   }
 
-  _initWebrtcConnection(connId, startProps) {
+  _initWebrtcConnection(connId, startPeerConnection, startProps) {
     const webrtcPeerProps = {
       connId,
       socket: this.socket,
@@ -30,7 +30,7 @@ class _Client {
     };
     this.webrtcPeer = new WebrtcPeer(webrtcPeerProps);
     // If this is the offeror, start the peer connection:
-    if (!startProps.connId) {
+    if (startPeerConnection) {
       this.webrtcPeer.start();
     }
   }
@@ -49,7 +49,7 @@ class _Client {
       this.socket.emit(socketEvents.outbound.START, event,
         response => {
           if (response.success) {
-            this._initWebrtcConnection(response.data.connId, props);
+            this._initWebrtcConnection(response.data.connId, response.data.isNew, props);
             return resolve(response.data.connId);
           }
           return reject(response.data.error);
