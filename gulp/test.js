@@ -19,6 +19,6 @@ gulp.task('test', () =>
       gulp.src('tests/**/*.test.js', { read: false })
         .pipe(mocha({ reporter: 'spec' }))
         .pipe(istanbul.writeReports())
-        .pipe(istanbul.enforceThresholds({ thresholds: { branches: coverage } }))
+        .pipe(istanbul.enforceThresholds({ thresholds: { global: coverage } }))
     })
 );
