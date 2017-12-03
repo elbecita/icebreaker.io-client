@@ -18,22 +18,22 @@ npm install icebreaker.io-client --save
 icebreaker.io-client uses the same interface as [socket.io-client](https://github.com/socketio/socket.io-client), since it is built on top of it. As an example, below you can find how to initialize it using ES6 import:
 
 ```js
-import client from 'icebreaker.io-client';
-const webrtcClient = client('https://localhost:8443', {
-	path: '/socket'
+import icebreaker from 'icebreaker.io-client';
+const icebreakerClient = icebreaker('https://localhost:8443', {
+  path: '/socket'
 });
 ```
 Once the client has been initialized, the webrtc connection can be started as showed below:
 
 ```js
 // These are events you can subscribe to:
-webrtcClient.events.connectionEnded.addOnce(yourConnectionEndedHandler);
-webrtcClient.events.getUserMediaError.addOnce(yourGetUserMediaErrorHandler);
-webrtcClient.events.localStreamReady.addOnce(yourLocalStreamReadyHandler);
-webrtcClient.events.remoteStreamReady.addOnce(yourRemoteStreamHandler);
+icebreakerClient.events.connectionEnded.addOnce(yourConnectionEndedHandler);
+icebreakerClient.events.getUserMediaError.addOnce(yourGetUserMediaErrorHandler);
+icebreakerClient.events.localStreamReady.addOnce(yourLocalStreamReadyHandler);
+icebreakerClient.events.remoteStreamReady.addOnce(yourRemoteStreamHandler);
 
 // All the properties are optional
-const webrtcProps = {
+const props = {
   connId: 'my-test-connection',
   mediaConstraints: {
     audio: true,
@@ -45,7 +45,7 @@ const webrtcProps = {
     ]
   }
 };
-webrtcClient.start(webrtcProps).then(connId => {
+icebreakerClient.start(props).then(connId => {
   console.log('>>>>> The connection id is: ', connId);
 });
 ```
