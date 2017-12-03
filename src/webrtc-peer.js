@@ -58,7 +58,6 @@ class WebrtcPeer {
   }
 
   _onPeerConnectionAddStream(event) {
-    console.log('>>>>> onPeerConnectionAddStream.');
     this.remoteVideoStream = event.stream;
     localEvents.remoteVideoReady.dispatch({
       connId: this.connId,
@@ -68,18 +67,17 @@ class WebrtcPeer {
   }
 
   _onPeerConnectionIceCandidate(event) {
-    const socketMessage = {
+    const socketEvent = {
       data: {
         connId: this.connId,
         candidate: event.candidate
       }
     };
-    this.socket.emit(socketEvents.outbound.ICE_CANDIDATE, socketMessage);
+    this.socket.emit(socketEvents.outbound.ICE_CANDIDATE, socketEvent);
   }
 
-  _onPeerConnectionSignalingStateChange(event) {
+  _onPeerConnectionSignalingStateChange() {
     if (this.pc) {
-      console.log('>>>>> _onPeerConnectionSignalingStateChange: ', this.pc.signalingState)
       switch(this.pc.signalingState) {
         case 'closed':
           localEvents.connectionEnded.dispatch();
@@ -91,9 +89,8 @@ class WebrtcPeer {
     }
   }
 
-  _onRemoteIceCandidate(socketMessage) {
-    console.log('>>>>> onRemoteIceCandidate.');
-    const data = socketMessage.data || {};
+  _onRemoteIceCandidate(socketEvent) {
+    const data = socketEvent.data || {};
 
     if (data.candidate) {
       const remoteCandidate = new RTCIceCandidate(data.candidate);
@@ -107,13 +104,11 @@ class WebrtcPeer {
   }
 
   _onRemotePeerJoined() {
-    console.log('>>>>> _onRemotePeerJoined');
     this._sdpExchange();
   }
 
-  _onRemoteSdp(socketMessage) {
-    console.log('>>>>> onRemoteSdp.');
-    const data = socketMessage.data || {};
+  _onRemoteSdp(socketEvent) {
+    const data = socketEvent.data || {};
 
     if (data.sdp) {
       const remoteDesc = new RTCSessionDescription(data.sdp);
@@ -134,20 +129,18 @@ class WebrtcPeer {
   }
 
   _processLocalSdp(sdp) {
-    console.log('>>>> Processing local sdp.');
     return this.pc.setLocalDescription(sdp)
       .then(() => {
-        const socketMessage = {
+        const socketEvent = {
           data: {
             connId: this.connId,
             sdp: this.pc.localDescription }
         };
-        this.socket.emit(socketEvents.outbound.SDP, socketMessage);
+        this.socket.emit(socketEvents.outbound.SDP, socketEvent);
       });
   }
 
   _processQueuedIceCandidates() {
-    console.log('>>>>> processing queued candidates.')
     this.remoteIceCandidatesUnprocessed.forEach(remoteCandidate => {
       this.pc.addIceCandidate(remoteCandidate);
     });
@@ -162,10 +155,7 @@ class WebrtcPeer {
       sdpExchangeTask = this.pc.createOffer();
     }
     sdpExchangeTask
-      .then(this._processLocalSdp)
-      .catch(error => {
-        console.log('>>>>> error on sdp exchange: ', error);
-      });
+      .then(this._processLocalSdp);
   }
 
   /**
@@ -183,7 +173,6 @@ class WebrtcPeer {
     return setRemoteDescriptionTask
       .then(() => navigator.mediaDevices.getUserMedia(this.mediaConstraints))
       .then(stream => {
-        console.log('>>>>> Inside getUserMedia.');
         this.localVideoStream = stream;
         localEvents.localVideoReady.dispatch({
           connId: this.connId,
@@ -196,10 +185,6 @@ class WebrtcPeer {
         if (remoteSdp) {
           return this._sdpExchange(remoteSdp);
         }
-        return Promise.resolve();
-      })
-      .catch(error => {
-        console.log('>>>>> error on getUserMedia: ', error);
       });
   }
 
@@ -207,12 +192,11 @@ class WebrtcPeer {
   * Stops the webrtc connection.
   */
   stop() {
-    if (this.localVideoStream && typeof this.localVideoStream.getTracks === 'function') {
-      console.log('>>>>> stopping stream tracks');
+    if (this.localVideoStream &&
+      typeof this.localVideoStream.getTracks === 'function') {
       this.localVideoStream.getTracks().forEach(track => track.stop());
     }
     if (this.pc && typeof this.pc.close === 'function') {
-      console.log('>>>>> stop called, calling close on pc.')
       this.pc.close();
       //delete this.pc;
     }

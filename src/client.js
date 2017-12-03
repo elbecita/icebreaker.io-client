@@ -41,7 +41,6 @@ class _Client {
 
   _dispose() {
     if (this.socket) {
-      console.log('>>>>> disposing socket.');
       this.socket.disconnect();
       delete this.socket;
     }
@@ -49,7 +48,6 @@ class _Client {
 
   _onConnect(){
     this.id = this.socket.id;
-    console.log('>>>>> socket client connected, socket id: ', this.socket.id);
   }
 
   start(_props) {

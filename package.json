@@ -4,14 +4,16 @@
   "description": "Client library for webrtc-icebreaker signaling server",
   "main": "./src/client.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "lint": "gulp lint",
+    "test": "gulp test"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/elbecita/icebreaker.io-client.git"
   },
   "keywords": [
-    "webrtc"
+    "webrtc",
+    "signaling"
   ],
   "author": "Maria Fernandez",
   "license": "GPL-3.0",
@@ -23,5 +25,18 @@
     "signals": "^1.0.0",
     "socket.io-client": "^2.0.4",
     "webrtc-adapter": "^6.0.2"
+  },
+  "devDependencies": {
+    "chai": "^4.1.2",
+    "expect": "^21.2.1",
+    "gulp": "^3.9.1",
+    "gulp-eslint": "^4.0.0",
+    "gulp-istanbul": "^1.1.2",
+    "gulp-mocha": "^3.0.1",
+    "isparta": "^4.0.0",
+    "proxyquire": "^1.8.0",
+    "require-dir": "^0.3.2",
+    "sinon": "^4.1.2",
+    "sinon-chai": "^2.14.0"
   }
 }
