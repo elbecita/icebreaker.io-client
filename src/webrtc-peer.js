@@ -116,11 +116,12 @@ class WebrtcPeer {
       // offer from the other peer. Otherwise, this is the offeree and needs to
       // initialize its pc.
       if (this.pc) {
-        return this.pc.setRemoteDescription(remoteDesc)
+        this.pc.setRemoteDescription(remoteDesc)
+          .then(this._processQueuedIceCandidates);
+      } else {
+        this.start(remoteDesc)
           .then(this._processQueuedIceCandidates);
       }
-      return this.start(remoteDesc)
-        .then(this._processQueuedIceCandidates);
     }
   }
 
@@ -134,7 +135,8 @@ class WebrtcPeer {
         const socketEvent = {
           data: {
             connId: this.connId,
-            sdp: this.pc.localDescription }
+            sdp: this.pc.localDescription
+          }
         };
         this.socket.emit(socketEvents.outbound.SDP, socketEvent);
       });
@@ -185,6 +187,13 @@ class WebrtcPeer {
         if (remoteSdp) {
           return this._sdpExchange(remoteSdp);
         }
+      },
+      getUserMediaError => {
+        localEvents.getUserMediaError.dispatch({
+          connId: this.connId,
+          peerId: this.socket.id,
+          error: getUserMediaError
+        });
       });
   }
 
