@@ -17,8 +17,8 @@ class WebrtcPeer {
     this.pc = null;
     this.remoteIceCandidatesUnprocessed = [];
 
-    this.localVideoStream = null;
-    this.remoteVideoStream = null;
+    this.localStream = null;
+    this.remoteStream = null;
 
     // PeerConnection event handlers:
     this._onPeerConnectionAddStream = this._onPeerConnectionAddStream.bind(this);
@@ -58,11 +58,11 @@ class WebrtcPeer {
   }
 
   _onPeerConnectionAddStream(event) {
-    this.remoteVideoStream = event.stream;
-    localEvents.remoteVideoReady.dispatch({
+    this.remoteStream = event.stream;
+    localEvents.remoteStreamReady.dispatch({
       connId: this.connId,
       peerId: this.socket.id,
-      stream: this.remoteVideoStream
+      stream: this.remoteStream
     });
   }
 
@@ -149,7 +149,7 @@ class WebrtcPeer {
   }
 
   _sdpExchange(remoteSdp) {
-    this.pc.addStream(this.localVideoStream);
+    this.pc.addStream(this.localStream);
     let sdpExchangeTask;
     if (remoteSdp) {
       sdpExchangeTask = this.pc.createAnswer();
@@ -175,11 +175,11 @@ class WebrtcPeer {
     return setRemoteDescriptionTask
       .then(() => navigator.mediaDevices.getUserMedia(this.mediaConstraints))
       .then(stream => {
-        this.localVideoStream = stream;
-        localEvents.localVideoReady.dispatch({
+        this.localStream = stream;
+        localEvents.localStreamReady.dispatch({
           connId: this.connId,
           peerId: this.socket.id,
-          stream: this.localVideoStream
+          stream: this.localStream
         });
 
         // If start called through onRemoteSdp both peers are connected, make local
@@ -201,9 +201,9 @@ class WebrtcPeer {
   * Stops the webrtc connection.
   */
   stop() {
-    if (this.localVideoStream &&
-      typeof this.localVideoStream.getTracks === 'function') {
-      this.localVideoStream.getTracks().forEach(track => track.stop());
+    if (this.localStream &&
+      typeof this.localStream.getTracks === 'function') {
+      this.localStream.getTracks().forEach(track => track.stop());
     }
     if (this.pc && typeof this.pc.close === 'function') {
       this.pc.close();

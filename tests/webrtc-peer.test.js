@@ -46,8 +46,8 @@ describe('WebrtcPeer tests', () => {
       expect(webrtcPeer.connId).to.equal(props.connId);
       expect(webrtcPeer.pc).to.be.null;
       expect(webrtcPeer.remoteIceCandidatesUnprocessed).to.be.empty;
-      expect(webrtcPeer.localVideoStream).to.be.null;
-      expect(webrtcPeer.remoteVideoStream).to.be.null;
+      expect(webrtcPeer.localStream).to.be.null;
+      expect(webrtcPeer.remoteStream).to.be.null;
     });
 
     it('should initialize the peer with default mediaConstraints if none provided', () => {
@@ -111,23 +111,23 @@ describe('WebrtcPeer tests', () => {
   });
 
   describe('_onPeerConnectionAddStream()', () => {
-    it('should dispatch a local remoteVideoReady event with the received stream', done => {
+    it('should dispatch a local remoteStreamReady event with the received stream', done => {
       // Arrange
       const props = {
         socket: socketMock,
         connId: 'test-connId'
       };
       const pcEvent = {
-        stream: 'test-remote-video-stream'
+        stream: 'test-remote-stream'
       };
       const webrtcPeer = new WebrtcPeer(props);
-      sinonSandbox.stub(localEvents.remoteVideoReady, 'dispatch')
+      sinonSandbox.stub(localEvents.remoteStreamReady, 'dispatch')
         .callsFake(localEvent => {
           // Assert
           expect(localEvent.connId).to.equal(props.connId);
           expect(localEvent.peerId).to.equal(props.socket.id);
           expect(localEvent.stream).to.equal(pcEvent.stream);
-          expect(webrtcPeer.remoteVideoStream).to.equal(pcEvent.stream);
+          expect(webrtcPeer.remoteStream).to.equal(pcEvent.stream);
           done();
         });
 
@@ -412,7 +412,7 @@ describe('WebrtcPeer tests', () => {
       // Arrange
       const remoteSdp = 'test-remote-sdp';
       const webrtcPeer = new WebrtcPeer({ socket: socketMock });
-      webrtcPeer.localVideoStream = 'test-local-video-stream';
+      webrtcPeer.localStream = 'test-local-stream';
       webrtcPeer.pc = {
         addStream: () => {},
         createAnswer: () => Promise.resolve()
@@ -422,7 +422,7 @@ describe('WebrtcPeer tests', () => {
       sinonSandbox.stub(webrtcPeer, '_processLocalSdp')
         .callsFake(() => {
           // Assert
-          expect(addStreamSpy).to.have.been.calledWith(webrtcPeer.localVideoStream);
+          expect(addStreamSpy).to.have.been.calledWith(webrtcPeer.localStream);
           expect(createAnswerSpy).to.have.been.calledOnce;
           done();
         })
@@ -435,7 +435,7 @@ describe('WebrtcPeer tests', () => {
     it('should create an sdp offer if no remote sdp is received', done => {
       // Arrange
       const webrtcPeer = new WebrtcPeer({ socket: socketMock });
-      webrtcPeer.localVideoStream = 'test-local-video-stream';
+      webrtcPeer.localStream = 'test-local-stream';
       webrtcPeer.pc = {
         addStream: () => {},
         createOffer: () => Promise.resolve()
@@ -445,7 +445,7 @@ describe('WebrtcPeer tests', () => {
       sinonSandbox.stub(webrtcPeer, '_processLocalSdp')
         .callsFake(() => {
           // Assert
-          expect(addStreamSpy).to.have.been.calledWith(webrtcPeer.localVideoStream);
+          expect(addStreamSpy).to.have.been.calledWith(webrtcPeer.localStream);
           expect(createOfferSpy).to.have.been.calledOnce;
           done();
         })
@@ -466,7 +466,7 @@ describe('WebrtcPeer tests', () => {
       };
     });
 
-    it('should start the peer connection and dispatch a local localVideoReady event ' +
+    it('should start the peer connection and dispatch a local localStreamReady event ' +
       'with the local stream', done => {
       // Arrange
       const props = {
@@ -476,7 +476,7 @@ describe('WebrtcPeer tests', () => {
       const webrtcPeer = new WebrtcPeer(props);
       const createStub = sinonSandbox.stub(webrtcPeer, '_createPeerConnection')
         .callsFake(() => {});
-      sinonSandbox.stub(localEvents.localVideoReady, 'dispatch')
+      sinonSandbox.stub(localEvents.localStreamReady, 'dispatch')
         .callsFake((event) => {
           // Assert
           expect(createStub).to.have.been.calledOnce;
@@ -504,7 +504,7 @@ describe('WebrtcPeer tests', () => {
         setRemoteDescription: () => Promise.resolve()
       };
       const setRemoteDescriptionSpy = sinonSandbox.spy(webrtcPeer.pc, 'setRemoteDescription');
-      const dispatchStub = sinonSandbox.stub(localEvents.localVideoReady, 'dispatch')
+      const dispatchStub = sinonSandbox.stub(localEvents.localStreamReady, 'dispatch')
         .callsFake(() => {});
       sinonSandbox.stub(webrtcPeer, '_sdpExchange')
         .callsFake((actualRemoteSdp) => {
@@ -559,12 +559,12 @@ describe('WebrtcPeer tests', () => {
       expect(dispatchStub).to.have.been.calledOnce;
     });
 
-    it('should stop every track of the local video stream', () => {
+    it('should stop every track of the local stream', () => {
       // Arrange
       const webrtcPeer = new WebrtcPeer({ socket: socketMock });
       const track = { stop: () => {} };
       const tracks = [track, track, track];
-      webrtcPeer.localVideoStream = {
+      webrtcPeer.localStream = {
         getTracks: () => (tracks)
       };
       const stopSpy = sinonSandbox.spy(track, 'stop');
