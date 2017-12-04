@@ -1,7 +1,7 @@
 {
   "name": "icebreaker.io-client",
-  "version": "0.0.0",
-  "description": "Client library for webrtc-icebreaker signaling server",
+  "version": "1.0.0",
+  "description": "Client JavaScript library for peer-to-peer WebRTC communications",
   "main": "./src/client.js",
   "scripts": {
     "lint": "gulp lint",
@@ -22,9 +22,9 @@
   },
   "homepage": "https://github.com/elbecita/icebreaker.io-client#readme",
   "dependencies": {
-    "signals": "^1.0.0",
-    "socket.io-client": "^2.0.4",
-    "webrtc-adapter": "^6.0.2"
+    "signals": "1.0.0",
+    "socket.io-client": "2.0.4",
+    "webrtc-adapter": "6.0.2"
   },
   "devDependencies": {
     "chai": "^4.1.2",
