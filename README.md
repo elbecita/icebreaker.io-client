@@ -8,7 +8,6 @@ icebreaker.io enables peer-to-peer real-time communications, using WebRTC techno
 
 
 ## Installation
-The package is currently in beta status, and should be installed with:
 
 ```bash
 npm install icebreaker.io-client --save
