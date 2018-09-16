@@ -1,9 +1,13 @@
 'use strict';
 
+/* eslint-env mocha */
+/* eslint-disable no-unused-expressions */
+
 const proxyquire = require('proxyquire');
 const chai = require('chai');
 const sinon = require('sinon');
 const sinonChai = require('sinon-chai');
+
 const expect = chai.expect;
 chai.use(sinonChai);
 
@@ -57,7 +61,7 @@ describe('Client tests', () => {
   });
 
   describe('_initWebrtcConnection()', () => {
-    it('should initialize the webrtc peer', done => {
+    it('should initialize the webrtc peer', (done) => {
       // Arrange
       const connId = 'test-connection-id';
       const props = {
@@ -83,7 +87,7 @@ describe('Client tests', () => {
       client._initWebrtcConnection(connId, false, props);
     });
 
-    it('should start the webrtc peer if flag received', done => {
+    it('should start the webrtc peer if flag received', (done) => {
       // Arrange
       const connId = 'test-connection-id';
       const props = {
@@ -144,14 +148,14 @@ describe('Client tests', () => {
         .callsFake(() => {});
 
       // Act
-      return client.start({ connId }).then(actualConnId => {
+      return client.start({ connId }).then((actualConnId) => {
         // Assert
         expect(actualConnId).to.equal(connId);
         expect(initWebrtcStub).to.have.been.calledOnce;
       });
     });
 
-    it('should not start the connection if failure response from server', done => {
+    it('should not start the connection if failure response from server', (done) => {
       // Arrange
       const client = Client();
       const connId = 'test-connection-id';
@@ -172,7 +176,7 @@ describe('Client tests', () => {
         .callsFake(() => {});
 
       // Act
-      client.start({ connId }).catch(error => {
+      client.start({ connId }).catch((error) => {
         // Assert
         expect(error).to.equal(testError);
         expect(initWebrtcStub).to.have.callCount(0);

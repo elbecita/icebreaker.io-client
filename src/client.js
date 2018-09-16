@@ -14,7 +14,7 @@ class _Client {
     this.events = localEvents;
 
     // Binding
-    this._initWebrtcConnection - this._initWebrtcConnection.bind(this);
+    this._initWebrtcConnection = this._initWebrtcConnection.bind(this);
     this._dispose = this._dispose.bind(this);
     this._onConnect = this._onConnect.bind(this);
     this.start = this.start.bind(this);
@@ -46,7 +46,7 @@ class _Client {
     }
   }
 
-  _onConnect(){
+  _onConnect() {
     this.id = this.socket.id;
   }
 
@@ -57,7 +57,7 @@ class _Client {
         data: { connId: props.connId }
       };
       this.socket.emit(socketEvents.outbound.START, event,
-        response => {
+        (response) => {
           if (response.success) {
             this.connId = response.data.connId;
             this._initWebrtcConnection(response.data.connId, response.data.isNew, props);
@@ -77,8 +77,6 @@ class _Client {
 }
 
 // This allows calling signalingServer without the 'new'
-const Client = (uri, opts) => {
-  return new _Client(uri, opts);
-}
+const Client = (uri, opts) => new _Client(uri, opts);
 
 module.exports = Client;

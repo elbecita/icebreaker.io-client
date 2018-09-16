@@ -1,8 +1,12 @@
 'use strict';
 
+/* eslint-env mocha */
+/* eslint-disable no-unused-expressions */
+
 const chai = require('chai');
 const sinon = require('sinon');
 const sinonChai = require('sinon-chai');
+
 const expect = chai.expect;
 chai.use(sinonChai);
 
@@ -91,11 +95,11 @@ describe('WebrtcPeer tests', () => {
   describe('_createPeerConnection()', () => {
     it('should create the RTC peer connection', () => {
       // Arrange
-      const testRTCPeerConnection = function() {
+      function testRTCPeerConnection() {
         this.onaddstream = null;
         this.onicecandidate = null;
-        this.onsignalingstatechange = null;
-      };
+        this.oniceconnectionstatechange = null;
+      }
       global.RTCPeerConnection = testRTCPeerConnection;
       const webrtcPeer = new WebrtcPeer({ socket: socketMock });
 
@@ -106,12 +110,12 @@ describe('WebrtcPeer tests', () => {
       expect(webrtcPeer.pc).to.be.instanceOf(testRTCPeerConnection);
       expect(webrtcPeer.pc.onaddstream).to.be.a('function');
       expect(webrtcPeer.pc.onicecandidate).to.be.a('function');
-      expect(webrtcPeer.pc.onsignalingstatechange).to.be.a('function');
-    })
+      expect(webrtcPeer.pc.oniceconnectionstatechange).to.be.a('function');
+    });
   });
 
   describe('_onPeerConnectionAddStream()', () => {
-    it('should dispatch a local remoteStreamReady event with the received stream', done => {
+    it('should dispatch a local remoteStreamReady event with the received stream', (done) => {
       // Arrange
       const props = {
         socket: socketMock,
@@ -122,7 +126,7 @@ describe('WebrtcPeer tests', () => {
       };
       const webrtcPeer = new WebrtcPeer(props);
       sinonSandbox.stub(localEvents.remoteStreamReady, 'dispatch')
-        .callsFake(localEvent => {
+        .callsFake((localEvent) => {
           // Assert
           expect(localEvent.connId).to.equal(props.connId);
           expect(localEvent.peerId).to.equal(props.socket.id);
@@ -136,8 +140,8 @@ describe('WebrtcPeer tests', () => {
     });
   });
 
-  describe('_onPeerConnectionIceCandidate()', () => {
-    it('should emit a socket event with the received ice candidate', done => {
+  describe('_onPeerConnectionLocalIceCandidate()', () => {
+    it('should emit a socket event with the received ice candidate', (done) => {
       // Arrange
       const props = {
         socket: socketMock,
@@ -157,11 +161,11 @@ describe('WebrtcPeer tests', () => {
         });
 
       // Act
-      webrtcPeer._onPeerConnectionIceCandidate(pcEvent);
+      webrtcPeer._onPeerConnectionLocalIceCandidate(pcEvent);
     });
   });
 
-  describe('_onPeerConnectionSignalingStateChange()', () => {
+  describe('_onPeerConnectionIceConnectionStateChange()', () => {
     it('should dispatch a local connectionEnded event if the signalingState of the peer ' +
       'connection is closed', () => {
       // Arrange
@@ -171,7 +175,7 @@ describe('WebrtcPeer tests', () => {
         .callsFake(() => {});
 
       // Act
-      webrtcPeer._onPeerConnectionSignalingStateChange();
+      webrtcPeer._onPeerConnectionIceConnectionStateChange();
 
       // Assert
       expect(dispatchStub).to.have.been.calledOnce;
@@ -186,7 +190,7 @@ describe('WebrtcPeer tests', () => {
         .callsFake(() => {});
 
       // Act
-      webrtcPeer._onPeerConnectionSignalingStateChange();
+      webrtcPeer._onPeerConnectionIceConnectionStateChange();
 
       // Assert
       expect(stopStub).to.have.been.calledOnce;
@@ -195,9 +199,9 @@ describe('WebrtcPeer tests', () => {
 
   describe('_onRemoteIceCandidate()', () => {
     before(() => {
-      const testRTCIceCandidate = function() {
+      function testRTCIceCandidate() {
         this.id = 'test-ice-candidate';
-      };
+      }
       global.RTCIceCandidate = testRTCIceCandidate;
     });
 
@@ -284,13 +288,13 @@ describe('WebrtcPeer tests', () => {
 
   describe('_onRemoteSdp()', () => {
     before(() => {
-      const testRTCSessionDescription = function() {
+      function testRTCSessionDescription() {
         this.id = 'test-session-description';
-      };
+      }
       global.RTCSessionDescription = testRTCSessionDescription;
     });
 
-    it('should set the remote sdp if there is an RTC peer connection started', done => {
+    it('should set the remote sdp if there is an RTC peer connection started', (done) => {
       // Arrange
       const webrtcPeer = new WebrtcPeer({ socket: socketMock });
       webrtcPeer.pc = {
@@ -312,7 +316,7 @@ describe('WebrtcPeer tests', () => {
       webrtcPeer._onRemoteSdp(socketEvent);
     });
 
-    it('should start the RTC peer connection if it is not started yet', done => {
+    it('should start the RTC peer connection if it is not started yet', (done) => {
       // Arrange
       const webrtcPeer = new WebrtcPeer({ socket: socketMock });
       webrtcPeer.pc = undefined;
@@ -357,7 +361,7 @@ describe('WebrtcPeer tests', () => {
   });
 
   describe('_processLocalSdp()', () => {
-    it('should set the local sdp and send it to the remote peer through the socket', done => {
+    it('should set the local sdp and send it to the remote peer through the socket', (done) => {
       // Arrange
       const props = {
         connId: 'test-connection-id',
@@ -366,8 +370,8 @@ describe('WebrtcPeer tests', () => {
       const sdp = 'test-local-sdp';
       const webrtcPeer = new WebrtcPeer(props);
       webrtcPeer.pc = {
-        setLocalDescription: (sdp) => {
-          webrtcPeer.pc.localDescription = sdp;
+        setLocalDescription: (_sdp) => {
+          webrtcPeer.pc.localDescription = _sdp;
           return Promise.resolve();
         }
       };
@@ -401,14 +405,14 @@ describe('WebrtcPeer tests', () => {
 
       // Assert
       expect(addIceCandidateSpy).to.have.callCount(unprocessedCandidates.length);
-      unprocessedCandidates.forEach(candidate => {
+      unprocessedCandidates.forEach((candidate) => {
         expect(addIceCandidateSpy).to.have.been.calledWith(candidate);
       });
     });
   });
 
   describe('_sdpExchange()', () => {
-    it('should create an sdp answer if a remote sdp is received', done => {
+    it('should create an sdp answer if a remote sdp is received', (done) => {
       // Arrange
       const remoteSdp = 'test-remote-sdp';
       const webrtcPeer = new WebrtcPeer({ socket: socketMock });
@@ -425,14 +429,13 @@ describe('WebrtcPeer tests', () => {
           expect(addStreamSpy).to.have.been.calledWith(webrtcPeer.localStream);
           expect(createAnswerSpy).to.have.been.calledOnce;
           done();
-        })
-
+        });
 
       // Act
       webrtcPeer._sdpExchange(remoteSdp);
     });
 
-    it('should create an sdp offer if no remote sdp is received', done => {
+    it('should create an sdp offer if no remote sdp is received', (done) => {
       // Arrange
       const webrtcPeer = new WebrtcPeer({ socket: socketMock });
       webrtcPeer.localStream = 'test-local-stream';
@@ -448,8 +451,7 @@ describe('WebrtcPeer tests', () => {
           expect(addStreamSpy).to.have.been.calledWith(webrtcPeer.localStream);
           expect(createOfferSpy).to.have.been.calledOnce;
           done();
-        })
-
+        });
 
       // Act
       webrtcPeer._sdpExchange();
@@ -457,7 +459,7 @@ describe('WebrtcPeer tests', () => {
   });
 
   describe('start()', () => {
-    let testStream = 'test-stream-from-user-media';
+    const testStream = 'test-stream-from-user-media';
     before(() => {
       global.navigator = {
         mediaDevices: {
@@ -467,7 +469,7 @@ describe('WebrtcPeer tests', () => {
     });
 
     it('should start the peer connection and dispatch a local localStreamReady event ' +
-      'with the local stream', done => {
+      'with the local stream', (done) => {
       // Arrange
       const props = {
         connId: 'test-connection-id',
@@ -490,7 +492,7 @@ describe('WebrtcPeer tests', () => {
       webrtcPeer.start();
     });
 
-    it('should set the remote sdp and do sdp exhcnage if received', done => {
+    it('should set the remote sdp and do sdp exhcnage if received', (done) => {
       // Arrange
       const props = {
         connId: 'test-connection-id',
@@ -514,13 +516,13 @@ describe('WebrtcPeer tests', () => {
           expect(dispatchStub).to.have.been.calledOnce;
           expect(actualRemoteSdp).to.equal(remoteSdp);
           done();
-        })
+        });
 
       // Act
       webrtcPeer.start(remoteSdp);
     });
 
-    it('should dispatch a local getUserMediaError event if getting the local stream fails', done => {
+    it('should dispatch a local getUserMediaError event if getting the local stream fails', (done) => {
       // Arrange
       const props = {
         connId: 'test-connection-id',

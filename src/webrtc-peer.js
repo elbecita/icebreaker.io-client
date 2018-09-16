@@ -22,8 +22,9 @@ class WebrtcPeer {
 
     // PeerConnection event handlers:
     this._onPeerConnectionAddStream = this._onPeerConnectionAddStream.bind(this);
-    this._onPeerConnectionIceCandidate = this._onPeerConnectionIceCandidate.bind(this);
-    this._onPeerConnectionSignalingStateChange = this._onPeerConnectionSignalingStateChange.bind(this);
+    this._onPeerConnectionLocalIceCandidate = this._onPeerConnectionLocalIceCandidate.bind(this);
+    this._onPeerConnectionIceConnectionStateChange =
+      this._onPeerConnectionIceConnectionStateChange.bind(this);
 
     // Socket event handlers:
     this._onRemoteIceCandidate = this._onRemoteIceCandidate.bind(this);
@@ -53,10 +54,14 @@ class WebrtcPeer {
 
     // Bind events
     this.pc.onaddstream = this._onPeerConnectionAddStream;
-    this.pc.onicecandidate = this._onPeerConnectionIceCandidate;
-    this.pc.onsignalingstatechange = this._onPeerConnectionSignalingStateChange;
+    this.pc.onicecandidate = this._onPeerConnectionLocalIceCandidate;
+    this.pc.oniceconnectionstatechange = this._onPeerConnectionIceConnectionStateChange;
   }
 
+  /**
+  * pc.onaddstream: fired when the remote stream is set.
+  * Sends a local event so the client knows there is a remote stream.
+  */
   _onPeerConnectionAddStream(event) {
     this.remoteStream = event.stream;
     localEvents.remoteStreamReady.dispatch({
@@ -66,7 +71,12 @@ class WebrtcPeer {
     });
   }
 
-  _onPeerConnectionIceCandidate(event) {
+  /**
+  * pc.onicecandidate: fired when a local ice candidate is discovered.
+  * Sends the local candidate to the signaling server so it can be passed to the
+  * remote peer.
+  */
+  _onPeerConnectionLocalIceCandidate(event) {
     const socketEvent = {
       data: {
         connId: this.connId,
@@ -76,19 +86,30 @@ class WebrtcPeer {
     this.socket.emit(socketEvents.outbound.ICE_CANDIDATE, socketEvent);
   }
 
-  _onPeerConnectionSignalingStateChange() {
+  /**
+  * pc.oniceconnectionstatechange: fired when the ice connection state changes.
+  *  - if closed: means the connection ended. Sends a local event so the client knows.
+  *  - if failed: means the connection could not be completed. Stops.
+  */
+  _onPeerConnectionIceConnectionStateChange() {
     if (this.pc) {
-      switch(this.pc.signalingState) {
+      switch (this.pc.signalingState) {
         case 'closed':
           localEvents.connectionEnded.dispatch();
           break;
         case 'failed':
+          // TODO: send a local event and let the client decide what to do.
           this.stop();
+          break;
+        default:
           break;
       }
     }
   }
 
+  /**
+  * It adds to the peer connection the remote ICE candidate received from the signaling server.
+  */
   _onRemoteIceCandidate(socketEvent) {
     const data = socketEvent.data || {};
 
@@ -103,18 +124,24 @@ class WebrtcPeer {
     }
   }
 
+  /**
+  * Starts the SDP exchange when the signaling server alerts that a remote peer has joined.
+  */
   _onRemotePeerJoined() {
     this._sdpExchange();
   }
 
+  /**
+  * Remote SDP file received.
+  *  - if it's the peer who initiaited the connection, they need to set the sdp (their peer
+  *    connection is already initialized).
+  *  - if it's the offeree, they need to start their peer connection.
+  */
   _onRemoteSdp(socketEvent) {
     const data = socketEvent.data || {};
 
     if (data.sdp) {
       const remoteDesc = new RTCSessionDescription(data.sdp);
-      // If peerConnection exists, this is the offeror receiving the remote
-      // offer from the other peer. Otherwise, this is the offeree and needs to
-      // initialize its pc.
       if (this.pc) {
         this.pc.setRemoteDescription(remoteDesc)
           .then(this._processQueuedIceCandidates);
@@ -125,10 +152,17 @@ class WebrtcPeer {
     }
   }
 
+  /**
+  * The signaling server sent a message informing that the other peer closed their connection.
+  * Stop.
+  */
   _onRemoteStop() {
     this.stop();
   }
 
+  /**
+  * Sets the local SDP and sends it to the signaling server so it can be passed to the remote peer.
+  */
   _processLocalSdp(sdp) {
     return this.pc.setLocalDescription(sdp)
       .then(() => {
@@ -142,12 +176,22 @@ class WebrtcPeer {
       });
   }
 
+  /**
+  * Adds all the ice candidates that were queued because the remote description was
+  * not yet set.
+  */
   _processQueuedIceCandidates() {
-    this.remoteIceCandidatesUnprocessed.forEach(remoteCandidate => {
+    this.remoteIceCandidatesUnprocessed.forEach((remoteCandidate) => {
       this.pc.addIceCandidate(remoteCandidate);
     });
   }
 
+  /**
+  * Sets the local stream.
+  *   If initiator of the connection: creates an SDP offer.
+  *   Else: creates an SDP answer.
+  * Process the local SDP.
+  */
   _sdpExchange(remoteSdp) {
     this.pc.addStream(this.localStream);
     let sdpExchangeTask;
@@ -162,6 +206,9 @@ class WebrtcPeer {
 
   /**
   * Starts a webrtc connection.
+  * @param {string} [remoteSdp] If this is the offeree peer, a remoteSdp should be provided (the
+  * offer from the the initiator) and must be set in the peer connection and sent as sdp answer
+  * to the signaling server so it can be passed to the remote peer.
   */
   start(remoteSdp) {
     this._createPeerConnection();
@@ -174,7 +221,7 @@ class WebrtcPeer {
 
     return setRemoteDescriptionTask
       .then(() => navigator.mediaDevices.getUserMedia(this.mediaConstraints))
-      .then(stream => {
+      .then((stream) => {
         this.localStream = stream;
         localEvents.localStreamReady.dispatch({
           connId: this.connId,
@@ -187,8 +234,10 @@ class WebrtcPeer {
         if (remoteSdp) {
           return this._sdpExchange(remoteSdp);
         }
+
+        return Promise.resolve();
       },
-      getUserMediaError => {
+      (getUserMediaError) => {
         localEvents.getUserMediaError.dispatch({
           connId: this.connId,
           peerId: this.socket.id,
@@ -207,7 +256,6 @@ class WebrtcPeer {
     }
     if (this.pc && typeof this.pc.close === 'function') {
       this.pc.close();
-      //delete this.pc;
     }
     localEvents.connectionEnded.dispatch();
   }
